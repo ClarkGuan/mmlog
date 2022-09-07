@@ -3,8 +3,8 @@ use std::ffi::{CStr, CString, NulError};
 use std::io::Write;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{mem, ptr, slice};
 use std::time::SystemTime;
+use std::{mem, ptr, slice};
 
 pub const KB: usize = 1024;
 pub const MB: usize = KB * 1024;
@@ -12,6 +12,16 @@ pub const MB: usize = KB * 1024;
 // 不可能用到吧？
 // pub const GB: usize = MB * 1024;
 // pub const TB: usize = GB * 1024;
+
+fn level_info(l: Level) -> &'static str {
+    match l {
+        Level::Error => "E",
+        Level::Warn => "W",
+        Level::Info => "I",
+        Level::Debug => "D",
+        Level::Trace => "T",
+    }
+}
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -111,12 +121,7 @@ impl Logger {
     const HEADER_SIZE: usize = mem::size_of::<usize>();
     const EMPTY_STRING: String = String::new();
 
-    fn new<P: AsRef<Path>>(
-        name: P,
-        size: usize,
-        level: Level,
-        sync: bool,
-    ) -> Result<Logger> {
+    fn new<P: AsRef<Path>>(name: P, size: usize, level: Level, sync: bool) -> Result<Logger> {
         let logger = Self::open_inner(
             name,
             size,
@@ -128,12 +133,7 @@ impl Logger {
         Ok(logger)
     }
 
-    fn open<P: AsRef<Path>>(
-        name: P,
-        size: usize,
-        level: Level,
-        sync: bool,
-    ) -> Result<Logger> {
+    fn open<P: AsRef<Path>>(name: P, size: usize, level: Level, sync: bool) -> Result<Logger> {
         Self::open_inner(name, size, level, sync, libc::O_RDWR)
     }
 
@@ -224,10 +224,12 @@ impl Log for Logger {
         if self.enabled(metadata) {
             unsafe {
                 let mut msg = format!(
-                    "{:?} {} {} {} [{}]: {}",
-                    SystemTime::UNIX_EPOCH.elapsed().expect("SystemTime::elapsed()"),
+                    "[{:?} {} {} {} {}] {}",
+                    SystemTime::UNIX_EPOCH
+                        .elapsed()
+                        .expect("SystemTime::elapsed()"),
                     libc::gettid(),
-                    record.level(),
+                    level_info(record.level()),
                     record.file().map_or(Self::EMPTY_STRING, |f| {
                         record
                             .line()
