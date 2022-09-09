@@ -6,6 +6,21 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::SystemTime;
 use std::{mem, ptr, slice};
 
+#[macro_export]
+macro_rules! dbg {
+    ($val:expr $(,)?) => {
+        match $val {
+            tmp => {
+                ::log::debug!("{} = {:#?}", stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::dbg!($val)),+,)
+    };
+}
+
 pub const KB: usize = 1024;
 pub const MB: usize = KB * 1024;
 
